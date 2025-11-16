@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Viewport ajustado para evitar zoom en inputs en iOS y manejar áreas seguras -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CaféPOS - Sistema de Gestión</title>
     
     <!-- Tailwind CSS -->
@@ -33,6 +34,9 @@
                             800: '#4a3422',
                             900: '#2b1e13',
                         }
+                    },
+                    height: {
+                        'screen-dvh': '100dvh', // Altura dinámica para móviles
                     }
                 }
             }
@@ -40,127 +44,1039 @@
     </script>
 
     <style>
-        /* Hide scrollbar for sleek UI */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* Prevent iOS double tap zoom */
-        button {
-            touch-action: manipulation;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
-        /* Removed !important to allow JS toggle */
-        .admin-hidden {
-            display: none;
-        }
+        /* Ocultar scrollbar pero mantener funcionalidad */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Prevenir zoom doble tap */
+        button, input, select { touch-action: manipulation; }
+        
+        /* Efecto cristal */
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        
+        /* Animación de carga suave */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+        /* Estilos para el input date en iOS */
+        input[type="date"] { -webkit-appearance: none; min-height: 44px; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+<body class="bg-gray-100 text-gray-800 font-sans h-screen-dvh overflow-hidden flex flex-col md:flex-row">
 
     <!-- LOGIN / ROLE SELECTION MODAL (Starts Open) -->
     <div id="login-modal" class="fixed inset-0 bg-coffee-900 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center animate-fade-in">
             <div class="mb-6 flex justify-center">
-                <div class="w-16 h-16 bg-coffee-100 rounded-full flex items-center justify-center text-coffee-600 text-3xl">
+                <div class="w-20 h-20 bg-coffee-100 rounded-full flex items-center justify-center text-coffee-600 text-4xl shadow-inner">
                     <i class="ph ph-coffee-bean"></i>
                 </div>
             </div>
-            <h2 class="text-2xl font-bold text-coffee-900 mb-2">CaféPOS</h2>
-            <p class="text-gray-500 mb-8">Seleccione su perfil para iniciar</p>
+            <h2 class="text-2xl font-bold text-coffee-900 mb-1">CaféPOS</h2>
+            <p class="text-gray-400 text-sm mb-8">Sistema de Gestión Inteligente</p>
 
-            <div class="space-y-3">
-                <button onclick="selectRole('employee')" class="w-full py-4 rounded-xl border-2 border-gray-100 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center px-4 group">
-                    <div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-coffee-200 flex items-center justify-center mr-4 text-gray-600 group-hover:text-coffee-800">
+            <div class="space-y-4">
+                <button onclick="selectRole('employee')" class="w-full p-4 rounded-xl border border-gray-200 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center group bg-white shadow-sm active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-coffee-200 flex items-center justify-center mr-4 text-gray-600 group-hover:text-coffee-800 text-xl">
                         <i class="ph ph-user"></i>
                     </div>
                     <div class="text-left">
                         <div class="font-bold text-gray-800">Cajero / Empleado</div>
-                        <div class="text-xs text-gray-400">Acceso limitado a Caja y Surtido</div>
+                        <div class="text-xs text-gray-400">Ventas y Visualización</div>
                     </div>
                 </button>
 
-                <button onclick="promptAdminPin()" class="w-full py-4 rounded-xl border-2 border-gray-100 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center px-4 group">
-                    <div class="w-10 h-10 rounded-full bg-coffee-100 flex items-center justify-center mr-4 text-coffee-600">
+                <button onclick="promptAdminPin()" class="w-full p-4 rounded-xl border border-gray-200 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center group bg-white shadow-sm active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-coffee-100 flex items-center justify-center mr-4 text-coffee-600 text-xl">
                         <i class="ph ph-crown"></i>
                     </div>
                     <div class="text-left">
                         <div class="font-bold text-coffee-900">Administrador</div>
-                        <div class="text-xs text-coffee-400">Control total del sistema</div>
+                        <div class="text-xs text-coffee-400">Control Total del sistema</div>
                     </div>
                 </button>
             </div>
+            <p class="mt-8 text-xs text-gray-300">v2.1.0 | Modo Seguro</p>
         </div>
     </div>
 
     <!-- PIN INPUT MODAL -->
     <div id="pin-modal" class="fixed inset-0 bg-black/80 z-[110] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs p-6 text-center">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Ingrese PIN de Admin</h3>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center animate-fade-in">
+            <h3 class="text-lg font-bold text-gray-900 mb-6">Acceso Administrativo</h3>
             <div class="flex justify-center gap-2 mb-6">
-                <input type="password" id="admin-pin" maxlength="4" class="text-center text-3xl tracking-[0.5em] w-32 border-b-2 border-coffee-500 focus:outline-none font-mono" placeholder="••••">
+                <input type="password" id="admin-pin" maxlength="4" class="text-center text-4xl tracking-[0.5em] w-full border-b-2 border-coffee-500 focus:outline-none font-mono bg-transparent" placeholder="••••" readonly>
             </div>
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <button onclick="addPinDigit(1)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">1</button>
-                <button onclick="addPinDigit(2)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">2</button>
-                <button onclick="addPinDigit(3)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">3</button>
-                <button onclick="addPinDigit(4)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">4</button>
-                <button onclick="addPinDigit(5)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">5</button>
-                <button onclick="addPinDigit(6)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">6</button>
-                <button onclick="addPinDigit(7)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">7</button>
-                <button onclick="addPinDigit(8)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">8</button>
-                <button onclick="addPinDigit(9)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">9</button>
-                <button onclick="closePinModal()" class="p-3 rounded text-red-500 font-bold text-xs flex items-center justify-center">CANCEL</button>
-                <button onclick="addPinDigit(0)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">0</button>
-                <button onclick="clearPin()" class="p-3 rounded text-gray-500 font-bold text-xs flex items-center justify-center">BORRAR</button>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <button onclick="addPinDigit(1)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">1</button>
+                <button onclick="addPinDigit(2)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">2</button>
+                <button onclick="addPinDigit(3)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">3</button>
+                <button onclick="addPinDigit(4)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">4</button>
+                <button onclick="addPinDigit(5)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">5</button>
+                <button onclick="addPinDigit(6)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">6</button>
+                <button onclick="addPinDigit(7)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">7</button>
+                <button onclick="addPinDigit(8)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">8</button>
+                <button onclick="addPinDigit(9)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">9</button>
+                <button onclick="closePinModal()" class="h-14 rounded-xl text-red-500 font-bold text-xs flex items-center justify-center uppercase hover:bg-red-50">Cancelar</button>
+                <button onclick="addPinDigit(0)" class="h-14 rounded-xl bg-gray-50 font-bold text-xl hover:bg-gray-200 active:scale-90 transition shadow-sm">0</button>
+                <button onclick="clearPin()" class="h-14 rounded-xl text-gray-500 font-bold text-xs flex items-center justify-center uppercase hover:bg-gray-100"><i class="ph ph-backspace text-xl"></i></button>
             </div>
-            <button onclick="verifyPin()" class="w-full bg-coffee-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-coffee-500">Acceder</button>
+            <button onclick="verifyPin()" class="w-full bg-coffee-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-coffee-500 active:scale-95 transition">Entrar</button>
         </div>
     </div>
 
-    <!-- SIDEBAR NAVIGATION -->
-    <nav class="bg-coffee-900 text-white order-2 md:order-1 w-full md:w-24 md:h-full flex md:flex-col justify-between items-center z-50 shadow-lg shrink-0">
+    <!-- SIDEBAR NAVIGATION (Mobile: Bottom Bar, Desktop: Side Bar) -->
+    <nav class="bg-coffee-900 text-white order-2 md:order-1 w-full md:w-24 h-[60px] md:h-full flex md:flex-col justify-between items-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-lg shrink-0 pb-safe">
         <div class="hidden md:flex p-4 font-bold text-xl tracking-tighter text-coffee-100">
             CP
         </div>
         
-        <div class="flex md:flex-col w-full md:w-auto justify-around md:justify-center gap-2 md:gap-8 p-2 md:p-0">
-            <button onclick="switchView('pos')" id="nav-pos" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-coffee-500">
+        <div class="flex md:flex-col w-full md:w-auto justify-around md:justify-center gap-1 md:gap-8 p-1 md:p-0 h-full md:h-auto">
+            <button onclick="switchView('pos')" id="nav-pos" class="nav-btn flex-1 md:flex-none p-2 md:p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center justify-center gap-1 text-coffee-500">
                 <i class="ph ph-cash-register text-2xl md:text-3xl"></i>
-                <span class="text-xs">Caja</span>
+                <span class="text-[10px] md:text-xs font-medium">Caja</span>
             </button>
-            <button onclick="switchView('inventory')" id="nav-inv" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-gray-400">
+            <button onclick="switchView('inventory')" id="nav-inv" class="nav-btn flex-1 md:flex-none p-2 md:p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center justify-center gap-1 text-gray-400">
                 <i class="ph ph-package text-2xl md:text-3xl"></i>
-                <span class="text-xs">Inventario</span>
+                <span class="text-[10px] md:text-xs font-medium">Stock</span>
             </button>
-            <!-- ADMIN ONLY BUTTON (Hidden by default) -->
-            <button onclick="switchView('sales')" id="nav-sales" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-gray-400 admin-only" style="display: none;">
+            <!-- ADMIN ONLY BUTTON -->
+            <button onclick="switchView('sales')" id="nav-sales" class="nav-btn flex-1 md:flex-none p-2 md:p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center justify-center gap-1 text-gray-400 admin-only hidden">
                 <i class="ph ph-receipt text-2xl md:text-3xl"></i>
-                <span class="text-xs">Ventas</span>
+                <span class="text-[10px] md:text-xs font-medium">Ventas</span>
             </button>
         </div>
 
         <div class="hidden md:flex p-4 pb-6 flex-col gap-4 items-center">
-            <button onclick="logout()" class="text-coffee-400 hover:text-white" title="Cerrar Sesión / Cambiar Usuario">
+            <button onclick="logout()" class="text-coffee-400 hover:text-white p-2" title="Cerrar Sesión">
                 <i class="ph ph-sign-out text-xl"></i>
             </button>
-            <div id="user-avatar" class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs border border-gray-500">?</div>
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs border border-gray-500 font-bold">?</div>
         </div>
-        <!-- Mobile Logout -->
-         <button onclick="logout()" class="md:hidden p-4 text-coffee-400 hover:text-white absolute right-0 top-0 mt-[-60px]" title="Salir">
-            <i class="ph ph-sign-out text-xl"></i>
+        <!-- Mobile Logout (Absolute top right on mobile view) -->
+         <button onclick="logout()" class="md:hidden fixed top-3 right-3 z-[60] w-8 h-8 bg-white/90 backdrop-blur rounded-full shadow text-coffee-900 flex items-center justify-center" title="Salir">
+            <i class="ph ph-sign-out"></i>
         </button>
     </nav>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 order-1 md:order-2 h-[calc(100vh-60px)] md:h-screen overflow-hidden relative">
+    <main class="flex-1 order-1 md:order-2 h-[calc(100dvh-60px)] md:h-screen-dvh overflow-hidden relative bg-gray-50 w-full">
         
+        <!-- CONNECTION STATUS BAR -->
+        <div id="connection-status" class="hidden w-full bg-red-500 text-white text-xs py-1 text-center font-bold z-[999] absolute top-0 left-0 shadow-md">
+            <i class="ph ph-wifi-slash"></i> MODO OFFLINE
+        </div>
+
+        <!-- VIEW: POS (CAJA) -->
+        <div id="view-pos" class="view-section h-full flex flex-col md:flex-row w-full">
+            <!-- Product Grid -->
+            <div class="flex-1 h-full overflow-y-auto p-4 md:p-6 pb-32 md:pb-6"> <!-- pb-32 extra padding for mobile cart -->
+                <header class="flex justify-between items-center mb-4 md:mb-6 pt-2 md:pt-0">
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold text-coffee-900 leading-tight">Cafetería</h1>
+                        <p class="text-xs md:text-sm text-gray-500 flex items-center gap-2 mt-1">
+                            <span id="current-date" class="capitalize">Cargando...</span>
+                            <span id="net-indicator" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        </p>
+                    </div>
+                    <div class="bg-white px-3 py-2 rounded-full shadow-sm flex items-center gap-2 border border-gray-200 w-40 md:w-auto focus-within:ring-2 focus-within:ring-coffee-500">
+                        <i class="ph ph-magnifying-glass text-gray-400"></i>
+                        <input type="text" id="pos-search" placeholder="Buscar..." class="outline-none text-sm bg-transparent w-full" onkeyup="filterProducts('pos')">
+                    </div>
+                </header>
+
+                <!-- Categories -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1" id="category-filters">
+                    <button onclick="filterByCategory('all')" class="px-4 py-2 rounded-full bg-coffee-600 text-white text-xs md:text-sm font-medium whitespace-nowrap shadow-md hover:bg-coffee-800 transition cat-filter ring-2 ring-offset-1 ring-coffee-600">Todos</button>
+                    <button onclick="filterByCategory('Bebidas')" class="px-4 py-2 rounded-full bg-white text-gray-600 text-xs md:text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">☕ Bebidas</button>
+                    <button onclick="filterByCategory('Comida')" class="px-4 py-2 rounded-full bg-white text-gray-600 text-xs md:text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">🥐 Comida</button>
+                    <button onclick="filterByCategory('Postres')" class="px-4 py-2 rounded-full bg-white text-gray-600 text-xs md:text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">🍰 Postres</button>
+                </div>
+
+                <!-- Products Grid Container -->
+                <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                    <div class="col-span-full text-center py-10 text-gray-400 animate-pulse flex flex-col items-center">
+                        <i class="ph ph-spinner animate-spin text-2xl mb-2"></i>
+                        Cargando inventario...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Panel (Responsive) -->
+            <!-- Desktop: Side Panel / Mobile: Bottom Sheet -->
+            <div id="cart-panel" class="w-full md:w-96 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)] md:shadow-2xl z-40 flex flex-col border-t md:border-t-0 md:border-l border-gray-200 md:rounded-none rounded-t-3xl transition-transform duration-300 absolute bottom-0 md:relative h-[85dvh] md:h-full transform translate-y-[calc(100%-80px)] md:translate-y-0">
+                
+                <!-- Mobile Handle (Click to toggle) -->
+                <div class="md:hidden w-full flex flex-col items-center pt-3 pb-2 cursor-pointer bg-white rounded-t-3xl border-b border-gray-50" onclick="toggleMobileCart()">
+                    <div class="w-12 h-1.5 bg-gray-300 rounded-full mb-2"></div>
+                    <div class="flex justify-between w-full px-6 items-center">
+                        <span class="font-bold text-coffee-900">Mi Pedido</span>
+                        <span class="font-bold text-coffee-600 text-lg" id="cart-total-mobile">$0.00</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-1 animate-pulse" id="cart-hint">Desliza o toca para ver detalle</p>
+                </div>
+
+                <!-- Desktop Header -->
+                <div class="hidden md:flex p-5 border-b border-gray-100 justify-between items-center bg-gray-50">
+                    <h2 class="font-bold text-lg text-coffee-900 flex items-center gap-2"><i class="ph ph-shopping-cart"></i> Pedido Actual</h2>
+                    <button onclick="clearCart()" class="text-red-500 text-xs font-bold hover:bg-red-50 px-2 py-1 rounded transition">LIMPIAR</button>
+                </div>
+
+                <!-- Cart Items List -->
+                <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3 bg-white md:bg-gray-50/30">
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-60">
+                        <i class="ph ph-shopping-bag-open text-4xl"></i>
+                        <p class="text-sm">Selecciona productos</p>
+                    </div>
+                </div>
+
+                <!-- Footer: Totals & Action -->
+                <div class="p-5 bg-white border-t border-gray-200 pb-safe">
+                    <div class="hidden md:block">
+                        <div class="flex justify-between mb-2 text-sm">
+                            <span class="text-gray-500">Subtotal</span>
+                            <span class="font-medium" id="cart-subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between mb-4 text-2xl font-bold text-coffee-900">
+                            <span>Total</span>
+                            <span id="cart-total">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="processCheckout()" id="btn-checkout" class="w-full bg-coffee-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-coffee-500 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg" disabled>
+                        <i class="ph ph-check-circle text-xl"></i> Cobrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: INVENTORY -->
+        <div id="view-inventory" class="view-section hidden h-full flex-col bg-gray-50 p-4 md:p-8 overflow-hidden w-full">
+            <header class="flex justify-between items-center mb-6 flex-shrink-0 mt-2 md:mt-0">
+                <h1 class="text-2xl font-bold text-coffee-900">Inventario</h1>
+                <!-- ADMIN ONLY BUTTON -->
+                <button onclick="openProductModal()" class="bg-coffee-600 text-white px-4 py-2 rounded-lg shadow hover:bg-coffee-500 transition flex items-center gap-2 admin-only hidden text-sm md:text-base">
+                    <i class="ph ph-plus-circle text-lg"></i> <span class="hidden sm:inline">Nuevo Producto</span>
+                </button>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="p-3 md:p-4 text-xs font-semibold text-gray-500 uppercase">Info</th>
+                                <th class="p-3 md:p-4 text-xs font-semibold text-gray-500 uppercase text-center bg-green-50 text-green-800 border-b-2 border-green-200 w-24 md:w-auto">Piso</th>
+                                <th class="p-3 md:p-4 text-xs font-semibold text-gray-500 uppercase text-center bg-blue-50 text-blue-800 border-b-2 border-blue-200 w-24 md:w-auto">Bodega</th>
+                                <th class="p-3 md:p-4 text-xs font-semibold text-gray-500 uppercase text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-gray-100 text-sm md:text-base">
+                            <!-- Generated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SALES HISTORY (ADMIN ONLY) -->
+        <div id="view-sales" class="view-section hidden h-full flex-col bg-gray-50 p-4 md:p-8 overflow-hidden w-full">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-shrink-0 gap-4 mt-2 md:mt-0">
+                <div>
+                    <h1 class="text-2xl font-bold text-coffee-900">Ventas</h1>
+                    <div class="text-sm text-gray-500 mt-1">
+                        Total (<span id="period-label">Hoy</span>): <span class="font-bold text-coffee-700" id="daily-total">$0.00</span>
+                    </div>
+                </div>
+                
+                <!-- Admin Toolbar -->
+                <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div class="relative">
+                        <input type="date" id="sales-date-filter" onchange="filterSales()" class="w-full sm:w-auto pl-8 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-coffee-500 outline-none bg-white h-10">
+                        <i class="ph ph-calendar absolute left-2.5 top-2.5 text-gray-400"></i>
+                    </div>
+                    <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-500 transition flex items-center justify-center gap-2 text-sm font-medium h-10">
+                        <i class="ph ph-microsoft-excel-logo text-lg"></i> 
+                        <span>Exportar</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase">Detalle</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body" class="divide-y divide-gray-100 text-sm">
+                            <!-- Generated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: Add/Edit Product -->
+    <div id="product-modal" class="fixed inset-0 bg-black/60 z-[120] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-95 opacity-0" id="product-modal-content">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-coffee-50">
+                <h3 class="font-bold text-lg text-coffee-900" id="modal-title">Producto</h3>
+                <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600 p-2">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <form id="product-form" onsubmit="handleProductSubmit(event)" class="p-5 space-y-4">
+                <input type="hidden" id="prod-id">
+                
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Icono</label>
+                        <input type="text" id="prod-emoji" class="w-full p-2 border border-gray-300 rounded-lg text-center text-2xl focus:ring-2 focus:ring-coffee-500 outline-none" placeholder="☕" required>
+                    </div>
+                    <div class="col-span-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                        <input type="text" id="prod-name" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none font-medium" placeholder="Ej. Café Latte" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Precio ($)</label>
+                        <input type="number" id="prod-price" step="0.01" inputmode="decimal" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none font-bold text-coffee-700" placeholder="0.00" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Categoría</label>
+                        <select id="prod-category" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none bg-white">
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Comida">Comida</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mt-2">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><i class="ph ph-warehouse"></i> Inventario Inicial</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-green-800 mb-1">Piso (Venta)</label>
+                            <input type="number" id="prod-stock-floor" inputmode="numeric" class="w-full p-2 bg-white border border-green-200 rounded text-center font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-blue-800 mb-1">Bodega</label>
+                            <input type="number" id="prod-stock-storage" inputmode="numeric" class="w-full p-2 bg-white border border-blue-200 rounded text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeProductModal()" class="flex-1 px-4 py-3 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 font-medium">Cancelar</button>
+                    <button type="submit" class="flex-1 px-4 py-3 text-white bg-coffee-600 rounded-xl hover:bg-coffee-500 font-bold shadow-md flex justify-center items-center gap-2">
+                        <span id="btn-save-text">Guardar</span>
+                        <div id="btn-save-loader" class="hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Reabastecimiento Rápido -->
+    <div id="restock-modal" class="fixed inset-0 bg-black/60 z-[130] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs p-6 animate-fade-in">
+            <h3 class="text-lg font-bold text-coffee-900 mb-4 flex items-center gap-2">
+                <div class="bg-yellow-100 p-2 rounded-full text-yellow-700"><i class="ph ph-arrows-left-right"></i></div>
+                Mover Stock
+            </h3>
+            <p class="text-sm text-gray-600 mb-4 leading-tight" id="restock-message">Mover de Depósito a Piso:</p>
+            <input type="hidden" id="restock-id">
+            <div class="flex gap-2 mb-4">
+                <button onclick="adjustRestock(-1)" class="w-12 bg-gray-100 rounded-lg font-bold text-xl hover:bg-gray-200">-</button>
+                <input type="number" id="restock-qty" inputmode="numeric" class="flex-1 p-3 border border-gray-300 rounded-lg text-center text-2xl font-bold text-coffee-800 focus:ring-2 focus:ring-coffee-500 outline-none" value="1" min="1">
+                <button onclick="adjustRestock(1)" class="w-12 bg-gray-100 rounded-lg font-bold text-xl hover:bg-gray-200">+</button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('restock-modal').classList.add('hidden')" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium">Cancelar</button>
+                <button onclick="confirmRestock()" class="flex-1 bg-coffee-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-coffee-500">Mover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- CONFIGURACIÓN MAESTRA ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnKlI_FJanyw3vwuRdrvJgetNxSnGkRs4",
+            authDomain: "cinedash-d9537.firebaseapp.com",
+            projectId: "cinedash-d9537",
+            storageBucket: "cinedash-d9537.firebasestorage.app",
+            messagingSenderId: "48889028275",
+            appId: "1:48889028275:web:52d10f193641f2f4191ac6",
+            measurementId: "G-ZV4W9FVV86"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        const ADMIN_PIN = "4321"; // PIN por defecto
+
+        // --- ESTADO GLOBAL ---
+        let currentUser = null;
+        let currentRole = null; // 'admin' | 'employee'
+        let products = [];
+        let cart = JSON.parse(localStorage.getItem('pos_cart')) || [];
+        let salesHistory = [];
+        let activeCategory = 'all';
+        let isMobileCartOpen = false;
+
+        // --- PERSISTENCIA OFFLINE ---
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') console.warn("Multiples pestañas abiertas.");
+                else if (err.code == 'unimplemented') console.warn("Navegador no soporta persistencia.");
+            });
+        } catch (e) { console.log("Offline mode ready"); }
+
+        // --- NETWORK STATUS ---
+        window.updateNetworkStatus = () => {
+            const isOnline = navigator.onLine;
+            const indicator = document.getElementById('net-indicator');
+            const banner = document.getElementById('connection-status');
+
+            if (isOnline) {
+                indicator.className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
+                banner.classList.add('hidden');
+            } else {
+                indicator.className = 'w-2 h-2 rounded-full bg-red-500';
+                banner.classList.remove('hidden');
+            }
+        }
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
+
+        // --- AUTHENTICATION ---
+        async function initAuth() {
+            try {
+                await signInAnonymously(auth);
+            } catch (e) {
+                console.error("Auth Error:", e);
+                // Fallback visual si falla auth anónima (raro si está habilitado en consola)
+                if(e.code === 'auth/admin-restricted-operation') {
+                    showToast("⚠️ Admin: Habilita 'Anónimo' en Firebase", "error");
+                }
+            }
+        }
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                initListeners();
+            }
+        });
+
+        // --- DATA LISTENERS ---
+        function initListeners() {
+            const prodRef = collection(db, 'products'); 
+            onSnapshot(prodRef, (snapshot) => {
+                products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderProducts();
+                renderInventory();
+            }, (error) => {
+                if(navigator.onLine && error.code === 'permission-denied') {
+                    showToast("⚠️ Error de Permisos. Revisa firestore.rules", "error");
+                }
+            });
+
+            const salesRef = collection(db, 'sales');
+            onSnapshot(salesRef, (snapshot) => {
+                salesHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                salesHistory.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                filterSales();
+            });
+        }
+
+        // --- UI LOGIC: LOGIN & ROLES ---
+        window.selectRole = (role) => loginAs(role);
+        
+        window.promptAdminPin = () => {
+            document.getElementById('pin-modal').classList.remove('hidden');
+            document.getElementById('pin-modal').classList.add('flex');
+            document.getElementById('admin-pin').value = '';
+        };
+
+        window.addPinDigit = (d) => {
+            const el = document.getElementById('admin-pin');
+            if(el.value.length < 4) el.value += d;
+        };
+        
+        window.clearPin = () => document.getElementById('admin-pin').value = '';
+        window.closePinModal = () => document.getElementById('pin-modal').classList.add('hidden');
+
+        window.verifyPin = () => {
+            if(document.getElementById('admin-pin').value === ADMIN_PIN) {
+                closePinModal();
+                loginAs('admin');
+            } else {
+                showToast('PIN Incorrecto', 'error');
+                document.getElementById('admin-pin').value = '';
+            }
+        };
+
+        function loginAs(role) {
+            currentRole = role;
+            document.getElementById('login-modal').classList.add('hidden');
+            updateUIForRole();
+            showToast(`Modo: ${role === 'admin' ? 'Administrador' : 'Cajero'}`, 'success');
+        }
+
+        window.logout = () => {
+            currentRole = null;
+            document.getElementById('login-modal').classList.remove('hidden');
+            switchView('pos');
+            // Reset UI visibility
+            isMobileCartOpen = false;
+            updateMobileCartState();
+        };
+
+        function updateUIForRole() {
+            const adminEls = document.querySelectorAll('.admin-only');
+            const avatar = document.getElementById('user-avatar');
+            
+            if(currentRole === 'admin') {
+                adminEls.forEach(el => el.classList.remove('hidden'));
+                adminEls.forEach(el => el.classList.add('flex')); // Ensure flex layout
+                avatar.innerText = 'SD';
+                avatar.className = 'w-8 h-8 rounded-full bg-coffee-600 flex items-center justify-center text-xs text-white border border-white shadow-sm font-bold';
+            } else {
+                adminEls.forEach(el => el.classList.add('hidden'));
+                adminEls.forEach(el => el.classList.remove('flex'));
+                avatar.innerText = 'CJ';
+                avatar.className = 'w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-xs text-white border border-gray-300 font-bold';
+            }
+            renderInventory();
+        }
+
+        // --- UI LOGIC: NAVIGATION & MOBILE CART ---
+        window.switchView = (viewName) => {
+            if(viewName === 'sales' && currentRole !== 'admin') return;
+
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            });
+            const target = document.getElementById(`view-${viewName}`);
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-coffee-500');
+                btn.classList.add('text-gray-400');
+            });
+            document.getElementById(`nav-${viewName === 'pos' ? 'pos' : viewName === 'inventory' ? 'inv' : 'sales'}`).classList.replace('text-gray-400', 'text-coffee-500');
+        };
+
+        window.toggleMobileCart = () => {
+            isMobileCartOpen = !isMobileCartOpen;
+            updateMobileCartState();
+        };
+
+        function updateMobileCartState() {
+            const panel = document.getElementById('cart-panel');
+            const hint = document.getElementById('cart-hint');
+            // On mobile: collapsed shows small peek, expanded shows full height
+            if(isMobileCartOpen) {
+                panel.classList.remove('translate-y-[calc(100%-80px)]');
+                panel.classList.add('translate-y-0');
+                hint.innerText = "Toca para minimizar";
+            } else {
+                panel.classList.add('translate-y-[calc(100%-80px)]');
+                panel.classList.remove('translate-y-0');
+                hint.innerText = "Desliza o toca para ver detalle";
+            }
+        }
+
+        // --- POS CORE ---
+        window.addToCart = (product) => {
+            // Clone to avoid ref issues
+            const p = { ...product };
+            const existing = cart.find(item => item.id === p.id);
+            const currentQtyInCart = existing ? existing.qty : 0;
+            
+            if (currentQtyInCart + 1 > (p.stockFloor || 0)) {
+                showToast(`¡Stock insuficiente en piso! (${p.stockFloor || 0})`, 'warning');
+                return;
+            }
+
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({
+                    id: p.id,
+                    name: p.name,
+                    price: parseFloat(p.price),
+                    emoji: p.emoji,
+                    qty: 1
+                });
+            }
+            saveCart();
+            renderCart();
+            renderProducts(); // Update badges
+        };
+
+        window.changeQty = (id, delta) => {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            
+            const product = products.find(p => p.id === id);
+            // Check stock limit if adding
+            if (delta > 0 && product && item.qty >= (product.stockFloor || 0)) {
+                showToast('Límite de stock alcanzado', 'warning');
+                return;
+            }
+
+            item.qty += delta;
+            if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+            
+            saveCart();
+            renderCart();
+            renderProducts();
+        };
+
+        window.renderCart = () => {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            const mobileTotal = document.getElementById('cart-total-mobile');
+            const subtotalEl = document.getElementById('cart-subtotal');
+            const checkoutBtn = document.getElementById('btn-checkout');
+            
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-300 gap-2"><i class="ph ph-shopping-bag-open text-4xl"></i><p class="text-sm">Carrito Vacío</p></div>`;
+                totalEl.innerText = '$0.00';
+                mobileTotal.innerText = '$0.00';
+                subtotalEl.innerText = '$0.00';
+                checkoutBtn.disabled = true;
+                checkoutBtn.classList.add('bg-gray-400', 'opacity-50');
+                checkoutBtn.classList.remove('bg-coffee-600', 'hover:bg-coffee-500', 'shadow-lg');
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                total += itemTotal;
+                
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100 touch-manipulation";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-2xl">${item.emoji}</span>
+                        <div class="min-w-0">
+                            <div class="font-bold text-sm text-coffee-900 truncate">${item.name}</div>
+                            <div class="text-xs text-gray-500">$${item.price.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex items-center bg-gray-100 rounded-lg h-8">
+                            <button onclick="changeQty('${item.id}', -1)" class="w-8 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-l-lg">-</button>
+                            <span class="w-6 text-center text-sm font-bold">${item.qty}</span>
+                            <button onclick="changeQty('${item.id}', 1)" class="w-8 h-full flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded-r-lg">+</button>
+                        </div>
+                        <div class="font-bold text-sm w-14 text-right">$${itemTotal.toFixed(2)}</div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            const fmtTotal = `$${total.toFixed(2)}`;
+            subtotalEl.innerText = fmtTotal;
+            totalEl.innerText = fmtTotal;
+            mobileTotal.innerText = fmtTotal;
+            
+            checkoutBtn.disabled = false;
+            checkoutBtn.classList.remove('bg-gray-400', 'opacity-50');
+            checkoutBtn.classList.add('bg-coffee-600', 'hover:bg-coffee-500', 'shadow-lg');
+        };
+
+        window.processCheckout = async () => {
+            if (cart.length === 0) return;
+
+            const btn = document.getElementById('btn-checkout');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Procesando...';
+            btn.disabled = true;
+
+            try {
+                let total = 0;
+                cart.forEach(i => total += (i.price * i.qty));
+
+                // 1. Save Sale Record
+                await addDoc(collection(db, 'sales'), {
+                    timestamp: serverTimestamp(),
+                    total: total,
+                    items: cart,
+                    userId: currentUser.uid,
+                    cashierRole: currentRole
+                });
+
+                // 2. Update Inventory (Floor Stock)
+                const updates = cart.map(item => {
+                    const prodRef = doc(db, 'products', item.id);
+                    const currentProd = products.find(p => p.id === item.id);
+                    const newFloor = Math.max(0, (currentProd?.stockFloor || 0) - item.qty);
+                    return updateDoc(prodRef, { stockFloor: newFloor });
+                });
+                await Promise.all(updates);
+
+                showToast(`Venta Exitosa: $${total.toFixed(2)}`, 'success');
+                window.clearCart();
+                
+                // Close mobile cart if open
+                isMobileCartOpen = false;
+                updateMobileCartState();
+
+            } catch (error) {
+                console.error("Checkout:", error);
+                showToast("Error al procesar. Revisa conexión.", "error");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        window.clearCart = () => {
+            cart = [];
+            saveCart();
+            renderCart();
+            renderProducts();
+        };
+        
+        function saveCart() { localStorage.setItem('pos_cart', JSON.stringify(cart)); }
+
+        // --- INVENTORY & PRODUCTS ---
+        window.renderProducts = () => {
+            const grid = document.getElementById('pos-grid');
+            grid.innerHTML = '';
+            
+            let filtered = products;
+            if (activeCategory !== 'all') filtered = products.filter(p => p.category === activeCategory);
+            
+            const search = document.getElementById('pos-search').value.toLowerCase();
+            if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 italic">No se encontraron productos.</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const floor = p.stockFloor || 0;
+                const storage = p.stockStorage || 0;
+                
+                // Stock calc considering cart
+                const inCart = cart.find(c => c.id === p.id);
+                const avail = floor - (inCart ? inCart.qty : 0);
+                
+                const isOut = avail <= 0;
+                const needsRefill = isOut && storage > 0;
+
+                const card = document.createElement('div');
+                card.className = `bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-2 hover:shadow-md transition-all cursor-pointer active:scale-95 relative overflow-hidden select-none ${isOut ? 'bg-gray-50' : ''}`;
+                
+                card.onclick = () => {
+                    if(!isOut) addToCart(p);
+                    else if(needsRefill) showToast('¡Hay en bodega! Surtir primero.', 'warning');
+                    else showToast('Agotado totalmente.', 'error');
+                };
+
+                card.innerHTML = `
+                    <div class="text-3xl md:text-4xl text-center mb-1">${p.emoji}</div>
+                    <div class="font-bold text-coffee-900 leading-tight text-sm md:text-base truncate">${p.name}</div>
+                    <div class="flex justify-between items-center mt-auto">
+                        <span class="font-bold text-coffee-600 text-sm md:text-base">$${parseFloat(p.price).toFixed(2)}</span>
+                        <span class="text-[10px] md:text-xs px-2 py-1 rounded-full ${avail < 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'} font-bold border border-opacity-20 border-current">
+                            ${avail} u.
+                        </span>
+                    </div>
+                    ${needsRefill ? '<div class="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-sm"></div>' : ''}
+                    ${isOut && !needsRefill ? '<div class="absolute inset-0 bg-white/60 flex items-center justify-center"><span class="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded rotate-[-12deg] border border-gray-300">AGOTADO</span></div>' : ''}
+                    ${isOut && needsRefill ? '<div class="absolute inset-0 bg-white/60 flex items-center justify-center"><span class="bg-blue-100 text-blue-600 text-xs font-bold px-2 py-1 rounded rotate-[-12deg] border border-blue-200 text-center leading-tight">SURTIR<br>BODEGA</span></div>' : ''}
+                `;
+                grid.appendChild(card);
+            });
+        };
+
+        window.renderInventory = () => {
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = '';
+
+            products.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition group";
+                
+                const isAdmin = currentRole === 'admin';
+                
+                // Botones de ajuste rápido solo para admin
+                const floorDisplay = isAdmin ? `
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="quickAdjust('${p.id}', 'floor', -1)" class="w-6 h-6 rounded bg-white border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-300 active:scale-90">-</button>
+                        <span class="font-bold w-6 text-center">${p.stockFloor||0}</span>
+                        <button onclick="quickAdjust('${p.id}', 'floor', 1)" class="w-6 h-6 rounded bg-white border border-gray-200 text-gray-500 hover:text-green-500 hover:border-green-300 active:scale-90">+</button>
+                    </div>
+                ` : `<span class="font-bold block text-center">${p.stockFloor||0}</span>`;
+
+                const storageDisplay = isAdmin ? `
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="quickAdjust('${p.id}', 'storage', -1)" class="w-6 h-6 rounded bg-white border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-300 active:scale-90">-</button>
+                        <span class="font-bold w-6 text-center">${p.stockStorage||0}</span>
+                        <button onclick="quickAdjust('${p.id}', 'storage', 1)" class="w-6 h-6 rounded bg-white border border-gray-200 text-gray-500 hover:text-green-500 hover:border-green-300 active:scale-90">+</button>
+                    </div>
+                ` : `<span class="font-bold block text-center">${p.stockStorage||0}</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-3 md:p-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${p.emoji}</span>
+                            <div>
+                                <div class="font-medium text-coffee-900">${p.name}</div>
+                                <div class="text-xs text-gray-400">${p.category}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3 md:p-4 border-b border-gray-100 bg-green-50/30 border-l border-green-100 text-green-800">
+                        ${floorDisplay}
+                    </td>
+                    <td class="p-3 md:p-4 border-b border-gray-100 bg-blue-50/30 border-l border-blue-100 text-blue-800 border-r">
+                        ${storageDisplay}
+                    </td>
+                    <td class="p-3 md:p-4 border-b border-gray-100 text-right">
+                        <div class="flex justify-end gap-2">
+                            <button onclick="openRestock('${p.id}', '${p.name}', ${p.stockStorage||0})" class="w-8 h-8 rounded bg-yellow-100 text-yellow-700 hover:bg-yellow-200 flex items-center justify-center shadow-sm" title="Mover al Piso">
+                                <i class="ph ph-arrow-fat-lines-left text-lg"></i>
+                            </button>
+                            ${isAdmin ? `
+                            <button onclick="editProduct('${p.id}')" class="w-8 h-8 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center"><i class="ph ph-pencil-simple"></i></button>
+                            <button onclick="deleteProduct('${p.id}')" class="w-8 h-8 rounded bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center"><i class="ph ph-trash"></i></button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        // --- SALES HISTORY ---
+        window.filterSales = () => {
+            const input = document.getElementById('sales-date-filter').value;
+            const tbody = document.getElementById('sales-table-body');
+            const totalEl = document.getElementById('daily-total');
+            const label = document.getElementById('period-label');
+            
+            tbody.innerHTML = '';
+            let sum = 0;
+
+            // Default to today if empty, respecting timezone
+            let targetDateStr = input ? new Date(input + 'T00:00:00').toLocaleDateString() : new Date().toLocaleDateString();
+            label.innerText = input ? "Selección" : "Hoy";
+
+            const filtered = salesHistory.filter(s => {
+                const d = s.timestamp ? new Date(s.timestamp.seconds * 1000) : new Date();
+                return d.toLocaleDateString() === targetDateStr;
+            });
+
+            filtered.forEach(s => {
+                sum += s.total;
+                const date = s.timestamp ? new Date(s.timestamp.seconds * 1000) : new Date();
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4 border-b border-gray-100 text-gray-600">
+                        <div class="font-bold">${date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    </td>
+                    <td class="p-4 border-b border-gray-100">
+                        <div class="flex flex-col text-xs gap-1">
+                            ${s.items.map(i => `<span>${i.qty}x ${i.name}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td class="p-4 border-b border-gray-100 text-right font-bold text-coffee-700">$${s.total.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if(filtered.length === 0) tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400">Sin ventas este día</td></tr>`;
+            totalEl.innerText = `$${sum.toFixed(2)}`;
+        };
+
+        window.exportToExcel = () => {
+            const data = salesHistory.map(s => ({
+                Fecha: new Date(s.timestamp.seconds*1000).toLocaleDateString(),
+                Hora: new Date(s.timestamp.seconds*1000).toLocaleTimeString(),
+                Total: s.total,
+                Items: s.items.map(i=>`${i.qty}x ${i.name}`).join(', ')
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+            XLSX.writeFile(wb, `Reporte_Ventas_${new Date().toISOString().slice(0,10)}.xlsx`);
+        };
+
+        // --- PRODUCT MANAGEMENT ACTIONS ---
+        window.handleProductSubmit = async (e) => {
+            e.preventDefault();
+            if(currentRole !== 'admin') return;
+
+            const btn = document.querySelector('#product-form button[type="submit"]');
+            const loader = document.getElementById('btn-save-loader');
+            const text = document.getElementById('btn-save-text');
+            text.classList.add('hidden'); loader.classList.remove('hidden'); btn.disabled = true;
+
+            const id = document.getElementById('prod-id').value;
+            const data = {
+                emoji: document.getElementById('prod-emoji').value,
+                name: document.getElementById('prod-name').value,
+                price: parseFloat(document.getElementById('prod-price').value),
+                category: document.getElementById('prod-category').value,
+                stockFloor: parseInt(document.getElementById('prod-stock-floor').value) || 0,
+                stockStorage: parseInt(document.getElementById('prod-stock-storage').value) || 0
+            };
+
+            try {
+                if(id) await updateDoc(doc(db, 'products', id), data);
+                else await addDoc(collection(db, 'products'), data);
+                
+                showToast('Producto Guardado', 'success');
+                closeProductModal();
+            } catch(err) {
+                console.error(err);
+                showToast('Error al guardar', 'error');
+            } finally {
+                text.classList.remove('hidden'); loader.classList.add('hidden'); btn.disabled = false;
+            }
+        };
+
+        window.quickAdjust = async (id, type, delta) => {
+            if(currentRole !== 'admin') return;
+            const p = products.find(x => x.id === id);
+            if(!p) return;
+            
+            const field = type === 'floor' ? 'stockFloor' : 'stockStorage';
+            const newVal = Math.max(0, (p[field] || 0) + delta);
+            
+            try {
+                await updateDoc(doc(db, 'products', id), { [field]: newVal });
+            } catch(e) { showToast('Error de conexión', 'error'); }
+        };
+
+        window.openRestock = (id, name, max) => {
+            if(max <= 0) { showToast('Bodega vacía', 'warning'); return; }
+            document.getElementById('restock-id').value = id;
+            document.getElementById('restock-message').innerHTML = `Mover <b>${name}</b> a Piso<br><span class='text-xs text-gray-400'>Máximo disponible: ${max}</span>`;
+            document.getElementById('restock-qty').max = max;
+            document.getElementById('restock-qty').value = 1;
+            document.getElementById('restock-modal').classList.remove('hidden');
+            document.getElementById('restock-modal').classList.add('flex');
+        };
+
+        window.adjustRestock = (d) => {
+            const el = document.getElementById('restock-qty');
+            let val = parseInt(el.value) + d;
+            if(val >= 1 && val <= parseInt(el.max)) el.value = val;
+        };
+
+        window.confirmRestock = async () => {
+            const id = document.getElementById('restock-id').value;
+            const qty = parseInt(document.getElementById('restock-qty').value);
+            const p = products.find(x => x.id === id);
+            
+            if(qty > (p.stockStorage || 0)) { showToast('Cantidad excede bodega', 'error'); return; }
+            
+            try {
+                await updateDoc(doc(db, 'products', id), {
+                    stockStorage: (p.stockStorage || 0) - qty,
+                    stockFloor: (p.stockFloor || 0) + qty
+                });
+                showToast('Stock movido', 'success');
+                document.getElementById('restock-modal').classList.add('hidden');
+            } catch(e) { showToast('Error al mover', 'error'); }
+        };
+
+        window.deleteProduct = async (id) => {
+            if(confirm('¿Eliminar producto permanentemente?')) {
+                try { await deleteDoc(doc(db, 'products', id)); showToast('Eliminado', 'success'); }
+                catch(e) { showToast('Error al eliminar', 'error'); }
+            }
+        };
+
+        window.editProduct = (id) => {
+            const p = products.find(x => x.id === id);
+            document.getElementById('prod-id').value = p.id;
+            document.getElementById('prod-emoji').value = p.emoji;
+            document.getElementById('prod-name').value = p.name;
+            document.getElementById('prod-price').value = p.price;
+            document.getElementById('prod-category').value = p.category;
+            document.getElementById('prod-stock-floor').value = p.stockFloor;
+            document.getElementById('prod-stock-storage').value = p.stockStorage;
+            openProductModal();
+        };
+
+        // --- MODAL UTILS ---
+        window.openProductModal = () => {
+            const m = document.getElementById('product-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            setTimeout(() => m.firstElementChild.classList.remove('scale-95', 'opacity-0'), 10);
+            if(!document.getElementById('prod-id').value) document.getElementById('product-form').reset();
+        };
+
+        window.closeProductModal = () => {
+            const m = document.getElementById('product-modal');
+            m.firstElementChild.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { m.classList.add('hidden'); document.getElementById('prod-id').value = ''; }, 200);
+        };
+
+        // --- TOAST & FILTERS ---
+        window.filterByCategory = (cat) => {
+            activeCategory = cat;
+            document.querySelectorAll('.cat-filter').forEach(b => {
+                const match = (cat === 'all' && b.textContent === 'Todos') || b.textContent.includes(cat);
+                if(match) {
+                    b.className = "px-4 py-2 rounded-full bg-coffee-600 text-white text-xs md:text-sm font-medium whitespace-nowrap shadow-md transition cat-filter ring-2 ring-offset-1 ring-coffee-600";
+                } else {
+                    b.className = "px-4 py-2 rounded-full bg-white text-gray-600 text-xs md:text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter";
+                }
+            });
+            renderProducts();
+        };
+        window.filterProducts = renderProducts;
+
+        window.showToast = (msg, type = 'success') => {
+            const div = document.createElement('div');
+            div.className = `fixed top-4 right-4 z-[150] px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-[-20px] opacity-0 flex items-center gap-3 font-bold ${type === 'success' ? 'bg-coffee-600 text-white' : 'bg-red-500 text-white'}`;
+            div.innerHTML = `<i class="ph ${type === 'success' ? 'ph-check-circle' : 'ph-warning-circle'} text-xl"></i> ${msg}`;
+            document.body.appendChild(div);
+            requestAnimationFrame(() => div.classList.remove('translate-y-[-20px]', 'opacity-0'));
+            setTimeout(() => { div.classList.add('opacity-0', 'translate-y-[-20px]'); setTimeout(() => div.remove(), 300); }, 3000);
+        };
+
+        // Clock
+        setInterval(() => {
+            const el = document.getElementById('current-date');
+            if(el) el.innerText = new Date().toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+        }, 60000);
+
+    </script>
+</body>
+</html>        
         <!-- CONNECTION STATUS BAR (NEW) -->
         <div id="connection-status" class="hidden w-full bg-red-500 text-white text-xs py-1 text-center font-bold z-[999] absolute top-0 left-0">
             <i class="ph ph-wifi-slash"></i> MODO OFFLINE - Las ventas se guardarán localmente
@@ -1234,4 +2150,5 @@
 
     </script>
 </body>
+
 </html>
