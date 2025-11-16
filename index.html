@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CaféPOS - Sistema de Gestión</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        coffee: {
+                            50: '#fdf8f6',
+                            100: '#f2e8e5',
+                            500: '#a67c52',
+                            600: '#8c6239',
+                            800: '#4a3422',
+                            900: '#2b1e13',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Hide scrollbar for sleek UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Prevent iOS double tap zoom */
+        button {
+            touch-action: manipulation;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        /* Removed !important to allow JS toggle */
+        .admin-hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- LOGIN / ROLE SELECTION MODAL (Starts Open) -->
+    <div id="login-modal" class="fixed inset-0 bg-coffee-900 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+            <div class="mb-6 flex justify-center">
+                <div class="w-16 h-16 bg-coffee-100 rounded-full flex items-center justify-center text-coffee-600 text-3xl">
+                    <i class="ph ph-coffee-bean"></i>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-coffee-900 mb-2">CaféPOS</h2>
+            <p class="text-gray-500 mb-8">Seleccione su perfil para iniciar</p>
+
+            <div class="space-y-3">
+                <button onclick="selectRole('employee')" class="w-full py-4 rounded-xl border-2 border-gray-100 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center px-4 group">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-coffee-200 flex items-center justify-center mr-4 text-gray-600 group-hover:text-coffee-800">
+                        <i class="ph ph-user"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-gray-800">Cajero / Empleado</div>
+                        <div class="text-xs text-gray-400">Acceso limitado a Caja y Surtido</div>
+                    </div>
+                </button>
+
+                <button onclick="promptAdminPin()" class="w-full py-4 rounded-xl border-2 border-gray-100 hover:border-coffee-500 hover:bg-coffee-50 transition flex items-center px-4 group">
+                    <div class="w-10 h-10 rounded-full bg-coffee-100 flex items-center justify-center mr-4 text-coffee-600">
+                        <i class="ph ph-crown"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-bold text-coffee-900">Administrador</div>
+                        <div class="text-xs text-coffee-400">Control total del sistema</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN INPUT MODAL -->
+    <div id="pin-modal" class="fixed inset-0 bg-black/80 z-[110] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs p-6 text-center">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Ingrese PIN de Admin</h3>
+            <div class="flex justify-center gap-2 mb-6">
+                <input type="password" id="admin-pin" maxlength="4" class="text-center text-3xl tracking-[0.5em] w-32 border-b-2 border-coffee-500 focus:outline-none font-mono" placeholder="••••">
+            </div>
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <button onclick="addPinDigit(1)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">1</button>
+                <button onclick="addPinDigit(2)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">2</button>
+                <button onclick="addPinDigit(3)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">3</button>
+                <button onclick="addPinDigit(4)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">4</button>
+                <button onclick="addPinDigit(5)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">5</button>
+                <button onclick="addPinDigit(6)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">6</button>
+                <button onclick="addPinDigit(7)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">7</button>
+                <button onclick="addPinDigit(8)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">8</button>
+                <button onclick="addPinDigit(9)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">9</button>
+                <button onclick="closePinModal()" class="p-3 rounded text-red-500 font-bold text-xs flex items-center justify-center">CANCEL</button>
+                <button onclick="addPinDigit(0)" class="p-3 rounded bg-gray-100 font-bold text-lg hover:bg-gray-200">0</button>
+                <button onclick="clearPin()" class="p-3 rounded text-gray-500 font-bold text-xs flex items-center justify-center">BORRAR</button>
+            </div>
+            <button onclick="verifyPin()" class="w-full bg-coffee-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-coffee-500">Acceder</button>
+        </div>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <nav class="bg-coffee-900 text-white order-2 md:order-1 w-full md:w-24 md:h-full flex md:flex-col justify-between items-center z-50 shadow-lg shrink-0">
+        <div class="hidden md:flex p-4 font-bold text-xl tracking-tighter text-coffee-100">
+            CP
+        </div>
+        
+        <div class="flex md:flex-col w-full md:w-auto justify-around md:justify-center gap-2 md:gap-8 p-2 md:p-0">
+            <button onclick="switchView('pos')" id="nav-pos" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-coffee-500">
+                <i class="ph ph-cash-register text-2xl md:text-3xl"></i>
+                <span class="text-xs">Caja</span>
+            </button>
+            <button onclick="switchView('inventory')" id="nav-inv" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-gray-400">
+                <i class="ph ph-package text-2xl md:text-3xl"></i>
+                <span class="text-xs">Inventario</span>
+            </button>
+            <!-- ADMIN ONLY BUTTON (Hidden by default) -->
+            <button onclick="switchView('sales')" id="nav-sales" class="nav-btn p-3 rounded-xl hover:bg-coffee-800 transition-all flex flex-col items-center gap-1 text-gray-400 admin-only" style="display: none;">
+                <i class="ph ph-receipt text-2xl md:text-3xl"></i>
+                <span class="text-xs">Ventas</span>
+            </button>
+        </div>
+
+        <div class="hidden md:flex p-4 pb-6 flex-col gap-4 items-center">
+            <button onclick="logout()" class="text-coffee-400 hover:text-white" title="Cerrar Sesión / Cambiar Usuario">
+                <i class="ph ph-sign-out text-xl"></i>
+            </button>
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs border border-gray-500">?</div>
+        </div>
+        <!-- Mobile Logout -->
+         <button onclick="logout()" class="md:hidden p-4 text-coffee-400 hover:text-white absolute right-0 top-0 mt-[-60px]" title="Salir">
+            <i class="ph ph-sign-out text-xl"></i>
+        </button>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 order-1 md:order-2 h-[calc(100vh-60px)] md:h-screen overflow-hidden relative">
+        
+        <!-- CONNECTION STATUS BAR (NEW) -->
+        <div id="connection-status" class="hidden w-full bg-red-500 text-white text-xs py-1 text-center font-bold z-[999] absolute top-0 left-0">
+            <i class="ph ph-wifi-slash"></i> MODO OFFLINE - Las ventas se guardarán localmente
+        </div>
+
+        <!-- VIEW: POS (CAJA) -->
+        <div id="view-pos" class="view-section h-full flex flex-col md:flex-row">
+            <!-- Product Grid -->
+            <div class="flex-1 h-full overflow-y-auto p-4 md:p-6 bg-gray-50">
+                <header class="flex justify-between items-center mb-6 mt-4 md:mt-0">
+                    <div>
+                        <h1 class="text-2xl font-bold text-coffee-900">Cafetería POS</h1>
+                        <p class="text-sm text-gray-500 flex items-center gap-2">
+                            <span id="current-date">Cargando...</span>
+                            <!-- Network Indicator -->
+                            <span id="net-indicator" class="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Estado de Red"></span>
+                            <span id="net-text" class="text-xs font-medium text-green-600">Online</span>
+                        </p>
+                    </div>
+                    <div class="bg-white px-4 py-2 rounded-full shadow-sm flex items-center gap-2">
+                        <i class="ph ph-magnifying-glass text-gray-400"></i>
+                        <input type="text" id="pos-search" placeholder="Buscar producto..." class="outline-none text-sm bg-transparent w-32 md:w-48" onkeyup="filterProducts('pos')">
+                    </div>
+                </header>
+
+                <!-- Categories -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2" id="category-filters">
+                    <button onclick="filterByCategory('all')" class="px-4 py-2 rounded-lg bg-coffee-600 text-white text-sm font-medium whitespace-nowrap shadow-md hover:bg-coffee-800 transition cat-filter ring-2 ring-offset-1 ring-coffee-600">Todos</button>
+                    <button onclick="filterByCategory('Bebidas')" class="px-4 py-2 rounded-lg bg-white text-gray-600 text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">☕ Bebidas</button>
+                    <button onclick="filterByCategory('Comida')" class="px-4 py-2 rounded-lg bg-white text-gray-600 text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">🥐 Comida</button>
+                    <button onclick="filterByCategory('Postres')" class="px-4 py-2 rounded-lg bg-white text-gray-600 text-sm font-medium whitespace-nowrap shadow-sm hover:bg-gray-100 transition cat-filter">🍰 Postres</button>
+                </div>
+
+                <!-- Products Grid Container -->
+                <div id="pos-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-20 md:pb-0">
+                    <div class="col-span-full text-center py-10 text-gray-400 animate-pulse">Cargando inventario...</div>
+                </div>
+            </div>
+
+            <!-- Current Order Panel (Cart) -->
+            <div class="w-full md:w-96 bg-white shadow-2xl z-40 flex flex-col h-[40vh] md:h-full border-t md:border-t-0 md:border-l border-gray-200 rounded-t-2xl md:rounded-none transform transition-transform duration-300 absolute bottom-0 md:relative" id="cart-panel">
+                <div class="md:hidden w-full flex justify-center pt-2 pb-1" onclick="toggleMobileCart()">
+                    <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+                </div>
+
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-bold text-lg text-coffee-900">Pedido Actual</h2>
+                    <button onclick="clearCart()" class="text-red-500 text-xs font-medium hover:underline">Limpiar</button>
+                </div>
+
+                <!-- Cart Items -->
+                <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-60">
+                        <i class="ph ph-shopping-cart text-4xl"></i>
+                        <p class="text-sm">El carrito está vacío</p>
+                    </div>
+                </div>
+
+                <!-- Totals & Checkout -->
+                <div class="p-5 bg-gray-50 border-t border-gray-200">
+                    <div class="flex justify-between mb-2 text-sm">
+                        <span class="text-gray-500">Subtotal</span>
+                        <span class="font-medium" id="cart-subtotal">$0.00</span>
+                    </div>
+                    <div class="flex justify-between mb-4 text-xl font-bold text-coffee-900">
+                        <span>Total</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                    <button onclick="processCheckout()" id="btn-checkout" class="w-full bg-coffee-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-coffee-500 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="ph ph-check-circle text-lg"></i> Cobrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: INVENTORY -->
+        <div id="view-inventory" class="view-section hidden h-full flex flex-col bg-gray-50 p-4 md:p-8 overflow-hidden">
+            <header class="flex justify-between items-center mb-6 flex-shrink-0 mt-4 md:mt-0">
+                <h1 class="text-2xl font-bold text-coffee-900">Inventario</h1>
+                <!-- ADMIN ONLY BUTTON (Hidden by default) -->
+                <button onclick="openProductModal()" class="bg-coffee-600 text-white px-4 py-2 rounded-lg shadow hover:bg-coffee-500 transition flex items-center gap-2 admin-only" style="display: none;">
+                    <i class="ph ph-plus-circle"></i> <span class="hidden sm:inline">Nuevo Producto</span>
+                </button>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase">Producto</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Cat.</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase text-center bg-green-50 text-green-800 border-b-2 border-green-200">
+                                    Exhibición
+                                    <div class="text-[10px] font-normal normal-case text-gray-500">Piso / Nevera</div>
+                                </th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase text-center bg-blue-50 text-blue-800 border-b-2 border-blue-200">
+                                    Depósito
+                                    <div class="text-[10px] font-normal normal-case text-gray-500">Congelador</div>
+                                </th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-gray-100">
+                            <!-- Generated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SALES HISTORY (ADMIN ONLY) -->
+        <div id="view-sales" class="view-section hidden h-full flex flex-col bg-gray-50 p-4 md:p-8 overflow-hidden">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-shrink-0 gap-4 mt-4 md:mt-0">
+                <div>
+                    <h1 class="text-2xl font-bold text-coffee-900">Historial de Ventas</h1>
+                    <div class="text-sm text-gray-500 mt-1">
+                        Total (<span id="period-label">Hoy</span>): <span class="font-bold text-coffee-700" id="daily-total">$0.00</span>
+                    </div>
+                </div>
+                
+                <!-- Admin Toolbar -->
+                <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div class="relative">
+                        <input type="date" id="sales-date-filter" onchange="filterSales()" class="w-full sm:w-auto pl-8 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-coffee-500 outline-none bg-white">
+                        <i class="ph ph-calendar absolute left-2.5 top-2.5 text-gray-400"></i>
+                    </div>
+                    <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-500 transition flex items-center justify-center gap-2 text-sm font-medium">
+                        <i class="ph ph-microsoft-excel-logo text-lg"></i> 
+                        <span>Exportar Excel</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex-1 overflow-hidden flex flex-col">
+                <div class="overflow-y-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase">Hora / Fecha</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase">Detalle</th>
+                                <th class="p-4 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body" class="divide-y divide-gray-100">
+                            <!-- Generated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: Add/Edit Product -->
+    <div id="product-modal" class="fixed inset-0 bg-black/50 z-[60] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-95 opacity-0" id="product-modal-content">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-coffee-50">
+                <h3 class="font-bold text-lg text-coffee-900" id="modal-title">Gestión de Producto</h3>
+                <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+            <form id="product-form" onsubmit="handleProductSubmit(event)" class="p-5 space-y-4">
+                <input type="hidden" id="prod-id">
+                
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Icono</label>
+                        <input type="text" id="prod-emoji" class="w-full p-2 border border-gray-300 rounded-lg text-center text-2xl focus:ring-2 focus:ring-coffee-500 outline-none" placeholder="☕" required>
+                    </div>
+                    <div class="col-span-3">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Nombre del Producto</label>
+                        <input type="text" id="prod-name" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none" placeholder="Ej. Pastelito Queso" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Precio Venta ($)</label>
+                        <input type="number" id="prod-price" step="0.01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none" placeholder="0.00" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Categoría</label>
+                        <select id="prod-category" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coffee-500 outline-none bg-white">
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Comida">Comida (Pastelitos/Tequeños)</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Distribución de Inventario</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-green-50 p-3 rounded-lg border border-green-100">
+                            <label class="block text-xs font-bold text-green-800 mb-1">Piso / Nevera</label>
+                            <input type="number" id="prod-stock-floor" class="w-full p-2 bg-white border border-green-200 rounded text-center font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0">
+                            <p class="text-[10px] text-green-600 mt-1 leading-tight">Disponible para venta inmediata</p>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <label class="block text-xs font-bold text-blue-800 mb-1">Depósito / Atrás</label>
+                            <input type="number" id="prod-stock-storage" class="w-full p-2 bg-white border border-blue-200 rounded text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
+                            <p class="text-[10px] text-blue-600 mt-1 leading-tight">Congelado o almacenado</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeProductModal()" class="flex-1 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
+                    <button type="submit" class="flex-1 px-4 py-2 text-white bg-coffee-600 rounded-lg hover:bg-coffee-500 font-medium shadow-md flex justify-center items-center gap-2">
+                        <span id="btn-save-text">Guardar Datos</span>
+                        <div id="btn-save-loader" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Reabastecimiento Rápido -->
+    <div id="restock-modal" class="fixed inset-0 bg-black/50 z-[70] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xs p-6">
+            <h3 class="text-lg font-bold text-coffee-900 mb-4 flex items-center gap-2">
+                <i class="ph ph-arrows-left-right text-coffee-600"></i> Mover Inventario
+            </h3>
+            <p class="text-sm text-gray-600 mb-4" id="restock-message">Mover de Depósito a Piso:</p>
+            <input type="hidden" id="restock-id">
+            <div class="flex gap-2 mb-4">
+                <input type="number" id="restock-qty" class="w-full p-3 border border-gray-300 rounded-lg text-center text-xl font-bold focus:ring-2 focus:ring-coffee-500 outline-none" value="1" min="1">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('restock-modal').classList.add('hidden')" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium">Cancelar</button>
+                <button onclick="confirmRestock()" class="flex-1 bg-coffee-600 text-white py-2 rounded-lg font-bold shadow-lg">Mover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+
+        // CONFIGURATION
+        // Sr. Dave: ESTA es tu configuración real. 
+        // ADVERTENCIA: Cualquiera con acceso a este archivo puede ver estas claves.
+        // Asegúrate de configurar las REGLAS DE FIREBASE en la consola para que solo permitan escritura a usuarios autenticados.
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnKlI_FJanyw3vwuRdrvJgetNxSnGkRs4",
+            authDomain: "cinedash-d9537.firebaseapp.com",
+            projectId: "cinedash-d9537",
+            storageBucket: "cinedash-d9537.firebasestorage.app",
+            messagingSenderId: "48889028275",
+            appId: "1:48889028275:web:52d10f193641f2f4191ac6",
+            measurementId: "G-ZV4W9FVV86"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const analytics = getAnalytics(app);
+        
+        // App ID used for collection paths - keeping your project consistent
+        const appId = 'cinedash-pos'; 
+
+        // --- OFFLINE PERSISTENCE SETUP ---
+        try {
+            enableIndexedDbPersistence(db)
+                .catch((err) => {
+                    if (err.code == 'failed-precondition') {
+                        console.warn("Multiple tabs open, persistence can only be enabled in one tab at a a time.");
+                    } else if (err.code == 'unimplemented') {
+                        console.warn("Browser doesn't support persistence");
+                    }
+                });
+        } catch (e) {
+            console.log("Persistence setup check");
+        }
+
+        // GLOBAL STATE
+        let currentUser = null;
+        let currentRole = null; // 'admin' or 'employee'
+        let products = [];
+        let cart = JSON.parse(localStorage.getItem('pos_cart')) || [];
+        let salesHistory = []; // Store full sales history
+        let activeCategory = 'all';
+        const ADMIN_PIN = "4321"; // Default Pin
+
+        // --- NETWORK STATUS LISTENER ---
+        window.updateNetworkStatus = () => {
+            const isOnline = navigator.onLine;
+            const indicator = document.getElementById('net-indicator');
+            const text = document.getElementById('net-text');
+            const banner = document.getElementById('connection-status');
+
+            if (isOnline) {
+                indicator.classList.remove('bg-red-500');
+                indicator.classList.add('bg-green-500', 'animate-pulse');
+                text.innerText = 'Online';
+                text.classList.remove('text-red-600');
+                text.classList.add('text-green-600');
+                banner.classList.add('hidden');
+            } else {
+                indicator.classList.remove('bg-green-500', 'animate-pulse');
+                indicator.classList.add('bg-red-500');
+                text.innerText = 'Offline';
+                text.classList.remove('text-green-600');
+                text.classList.add('text-red-600');
+                banner.classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus(); // Initial check
+
+        // --- AUTHENTICATION ---
+        async function initAuth() {
+            // Usamos autenticación anónima por simplicidad para empezar
+            await signInAnonymously(auth);
+        }
+        
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log("System Online. User:", user.uid);
+                initListeners();
+            }
+        });
+
+        // --- ROLE MANAGEMENT ---
+        window.selectRole = (role) => {
+            if(role === 'employee') {
+                loginAs('employee');
+            }
+        }
+
+        window.promptAdminPin = () => {
+            const pinModal = document.getElementById('pin-modal');
+            pinModal.classList.remove('hidden');
+            pinModal.classList.add('flex');
+            document.getElementById('admin-pin').value = '';
+            document.getElementById('admin-pin').focus();
+        }
+
+        window.addPinDigit = (digit) => {
+            const el = document.getElementById('admin-pin');
+            if(el.value.length < 4) el.value += digit;
+        }
+        
+        window.clearPin = () => document.getElementById('admin-pin').value = '';
+        
+        window.closePinModal = () => {
+            document.getElementById('pin-modal').classList.add('hidden');
+            document.getElementById('pin-modal').classList.remove('flex');
+        }
+
+        window.verifyPin = () => {
+            const input = document.getElementById('admin-pin').value;
+            if(input === ADMIN_PIN) {
+                closePinModal();
+                loginAs('admin');
+            } else {
+                showToast('PIN Incorrecto', 'error');
+                document.getElementById('admin-pin').value = '';
+                document.getElementById('admin-pin').classList.add('animate-pulse', 'border-red-500');
+                setTimeout(() => document.getElementById('admin-pin').classList.remove('animate-pulse', 'border-red-500'), 500);
+            }
+        }
+
+        function loginAs(role) {
+            currentRole = role;
+            document.getElementById('login-modal').classList.add('hidden');
+            updateUIForRole();
+            showToast(`Sesión iniciada: ${role === 'admin' ? 'Administrador' : 'Cajero'}`, 'success');
+        }
+
+        window.logout = () => {
+            currentRole = null;
+            document.getElementById('login-modal').classList.remove('hidden');
+            switchView('pos'); // Reset view
+        }
+
+        function updateUIForRole() {
+            const adminElements = document.querySelectorAll('.admin-only');
+            const avatar = document.getElementById('user-avatar');
+            
+            if(currentRole === 'admin') {
+                // Force flex display for admin buttons since they use flexbox
+                adminElements.forEach(el => el.style.display = 'flex'); 
+                
+                avatar.innerText = 'SD';
+                avatar.classList.remove('bg-gray-600');
+                avatar.classList.add('bg-coffee-600');
+            } else {
+                adminElements.forEach(el => el.style.display = 'none'); 
+                
+                avatar.innerText = 'CJ';
+                avatar.classList.add('bg-gray-600');
+                avatar.classList.remove('bg-coffee-600');
+            }
+            // Refresh inventory to show/hide buttons in table
+            renderInventory();
+        }
+
+        // --- DATA LISTENERS ---
+        function initListeners() {
+            // Sr. Dave: Usando tu propia colección de datos
+            const prodRef = collection(db, 'products'); 
+            
+            onSnapshot(prodRef, (snapshot) => {
+                products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderProducts();
+                renderInventory();
+            }, (error) => {
+                console.error("Error fetching products:", error);
+                if(navigator.onLine) showToast("Error de conexión con inventario", "error");
+            });
+
+            const salesRef = collection(db, 'sales');
+            onSnapshot(salesRef, (snapshot) => {
+                salesHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                salesHistory.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                // Initial Render
+                filterSales();
+            });
+        }
+
+        // --- SALES FILTERING & EXPORT ---
+        
+        window.filterSales = () => {
+            const dateInput = document.getElementById('sales-date-filter').value;
+            const tbody = document.getElementById('sales-table-body');
+            const totalEl = document.getElementById('daily-total');
+            const labelEl = document.getElementById('period-label');
+            
+            tbody.innerHTML = '';
+            let totalPeriod = 0;
+            
+            // Determine filtered set
+            let filteredSales = salesHistory;
+            if(dateInput) {
+                const selectedDateStr = new Date(dateInput + 'T00:00:00').toLocaleDateString();
+                filteredSales = salesHistory.filter(sale => {
+                    const saleDate = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : new Date();
+                    return saleDate.toLocaleDateString() === selectedDateStr;
+                });
+                labelEl.innerText = "Selección";
+            } else {
+                const todayStr = new Date().toLocaleDateString();
+                filteredSales = salesHistory.filter(sale => {
+                    const saleDate = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : new Date();
+                    return saleDate.toLocaleDateString() === todayStr;
+                });
+                labelEl.innerText = "Hoy";
+            }
+
+            filteredSales.forEach(sale => {
+                totalPeriod += sale.total;
+                const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : new Date();
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4 border-b border-gray-100 text-sm text-gray-500">
+                        <div class="font-bold text-gray-700">${date.toLocaleDateString()}</div>
+                        <div class="text-xs">${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    </td>
+                    <td class="p-4 border-b border-gray-100 text-sm">
+                        <div class="flex flex-col">
+                            ${sale.items.map(i => `<span class="text-xs text-gray-600">${i.qty}x ${i.name}</span>`).join('')}
+                        </div>
+                    </td>
+                    <td class="p-4 border-b border-gray-100 text-right font-bold text-coffee-700">$${sale.total.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if(filteredSales.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-gray-400">No hay ventas en este periodo</td></tr>`;
+            }
+
+            totalEl.innerText = `$${totalPeriod.toFixed(2)}`;
+        }
+
+        window.exportToExcel = () => {
+            // 1. Prepare Data for Sales Sheet
+            const salesData = salesHistory.map(sale => {
+                const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000) : new Date();
+                const itemsStr = sale.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                return {
+                    "ID Venta": sale.id,
+                    "Fecha": date.toLocaleDateString(),
+                    "Hora": date.toLocaleTimeString(),
+                    "Items": itemsStr,
+                    "Total Venta": sale.total,
+                    "Cajero": sale.cashierRole === 'admin' ? 'Admin' : 'Empleado'
+                };
+            });
+
+            // 2. Prepare Data for Inventory Snapshot
+            const invData = products.map(p => ({
+                "Producto": p.name,
+                "Categoría": p.category,
+                "Precio": p.price,
+                "Stock Piso": p.stockFloor || 0,
+                "Stock Bodega": p.stockStorage || 0,
+                "Total Stock": (p.stockFloor || 0) + (p.stockStorage || 0),
+                "Valor Inventario": ((p.stockFloor || 0) + (p.stockStorage || 0)) * p.price
+            }));
+
+            // 3. Prepare Daily Summary
+            const dailySummary = {};
+            salesHistory.forEach(sale => {
+                const date = sale.timestamp ? new Date(sale.timestamp.seconds * 1000).toLocaleDateString() : 'N/A';
+                if(!dailySummary[date]) dailySummary[date] = 0;
+                dailySummary[date] += sale.total;
+            });
+            const summaryData = Object.keys(dailySummary).map(date => ({
+                "Fecha": date,
+                "Total Vendido": dailySummary[date]
+            }));
+
+            // 4. Create Workbook
+            const wb = XLSX.utils.book_new();
+            
+            const wsSales = XLSX.utils.json_to_sheet(salesData);
+            XLSX.utils.book_append_sheet(wb, wsSales, "Ventas Detalladas");
+            
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen Diario");
+
+            const wsInv = XLSX.utils.json_to_sheet(invData);
+            XLSX.utils.book_append_sheet(wb, wsInv, "Inventario Actual");
+
+            // 5. Download
+            const fileName = `CafePOS_Reporte_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // --- UI RENDERING ---
+        window.renderProducts = () => {
+            const grid = document.getElementById('pos-grid');
+            grid.innerHTML = '';
+            
+            let filtered = products;
+            if (activeCategory !== 'all') {
+                filtered = products.filter(p => p.category === activeCategory);
+            }
+            
+            const search = document.getElementById('pos-search').value.toLowerCase();
+            if (search) {
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">No hay productos disponibles.</div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const floorStock = p.stockFloor || 0;
+                const storageStock = p.stockStorage || 0;
+
+                const inCart = cart.find(c => c.id === p.id);
+                const currentFloorStock = floorStock - (inCart ? inCart.qty : 0);
+                const isOutOfStockFloor = currentFloorStock <= 0;
+                const needsRefill = isOutOfStockFloor && storageStock > 0;
+
+                const el = document.createElement('div');
+                el.className = `bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2 hover:shadow-md transition-all cursor-pointer active:scale-95 relative overflow-hidden ${isOutOfStockFloor ? 'opacity-75 bg-gray-50' : ''}`;
+                
+                el.onclick = () => {
+                    if (!isOutOfStockFloor) {
+                        addToCart(p);
+                    } else if (needsRefill) {
+                        showToast('¡Surtir nevera/piso primero!', 'warning');
+                    } else {
+                        showToast('Agotado totalmente', 'error');
+                    }
+                };
+                
+                el.innerHTML = `
+                    <div class="text-4xl text-center mb-1">${p.emoji || '☕'}</div>
+                    <div class="font-bold text-coffee-900 leading-tight truncate">${p.name}</div>
+                    <div class="flex justify-between items-center mt-auto">
+                        <span class="font-bold text-coffee-600">$${parseFloat(p.price).toFixed(2)}</span>
+                        <div class="flex flex-col items-end">
+                            <span class="text-xs px-2 py-1 rounded-full ${currentFloorStock < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} font-bold">
+                                ${currentFloorStock}
+                            </span>
+                        </div>
+                    </div>
+                    ${needsRefill ? '<div class="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full animate-pulse" title="Hay en bodega"></div>' : ''}
+                    ${isOutOfStockFloor && !needsRefill ? '<div class="absolute inset-0 bg-gray-100/50 flex items-center justify-center font-bold text-gray-500 rotate-[-12deg] border-2 border-gray-300 m-4 rounded">AGOTADO</div>' : ''}
+                    ${isOutOfStockFloor && needsRefill ? '<div class="absolute inset-0 bg-blue-50/50 flex items-center justify-center font-bold text-blue-600 rotate-[-12deg] border-2 border-blue-200 m-4 rounded text-xs text-center">SURTIR<br>DE BODEGA</div>' : ''}
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        window.renderInventory = () => {
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = '';
+
+            products.forEach(p => {
+                const floor = p.stockFloor || 0;
+                const storage = p.stockStorage || 0;
+                const total = floor + storage;
+
+                // PERMISSIONS LOGIC
+                const isAdmin = currentRole === 'admin';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 group transition-colors";
+                
+                // Only Admin can quick-edit buttons in table, Employee sees text only
+                const floorControls = isAdmin ? `
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="quickAdjustStock('${p.id}', 'floor', -1)" class="w-6 h-6 rounded-full bg-white border border-green-200 hover:bg-green-100 text-green-700 flex items-center justify-center shadow-sm active:scale-90">-</button>
+                        <span class="w-8 font-bold text-green-800 text-lg">${floor}</span>
+                        <button onclick="quickAdjustStock('${p.id}', 'floor', 1)" class="w-6 h-6 rounded-full bg-white border border-green-200 hover:bg-green-100 text-green-700 flex items-center justify-center shadow-sm active:scale-90">+</button>
+                    </div>
+                ` : `<span class="font-bold text-green-800 text-lg block text-center">${floor}</span>`;
+
+                const storageControls = isAdmin ? `
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="quickAdjustStock('${p.id}', 'storage', -1)" class="w-6 h-6 rounded-full bg-white border border-blue-200 hover:bg-blue-100 text-blue-700 flex items-center justify-center shadow-sm active:scale-90">-</button>
+                        <span class="w-8 font-bold text-blue-800 text-lg">${storage}</span>
+                        <button onclick="quickAdjustStock('${p.id}', 'storage', 1)" class="w-6 h-6 rounded-full bg-white border border-blue-200 hover:bg-blue-100 text-blue-700 flex items-center justify-center shadow-sm active:scale-90">+</button>
+                    </div>
+                ` : `<span class="font-bold text-blue-800 text-lg block text-center">${storage}</span>`;
+
+                const actionButtons = `
+                    <div class="flex justify-end gap-2">
+                        <button onclick="openRestockModal('${p.id}', '${p.name}', ${storage})" class="bg-yellow-100 text-yellow-700 p-2 rounded hover:bg-yellow-200 transition shadow-sm" title="Surtir (Mover de Bodega a Piso)">
+                            <i class="ph ph-arrow-fat-lines-left text-lg"></i>
+                        </button>
+                        ${isAdmin ? `
+                        <button onclick="editProduct('${p.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded"><i class="ph ph-pencil-simple text-lg"></i></button>
+                        <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="ph ph-trash text-lg"></i></button>
+                        ` : ''}
+                    </div>
+                `;
+
+                tr.innerHTML = `
+                    <td class="p-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${p.emoji || '📦'}</span>
+                            <div>
+                                <div class="font-medium text-coffee-900">${p.name}</div>
+                                ${isAdmin ? `<div class="text-[10px] text-gray-400 font-mono">Total: ${total} u.</div>` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4 border-b border-gray-100 hidden sm:table-cell">
+                        <span class="px-2 py-1 rounded-md bg-gray-100 text-xs text-gray-600">${p.category}</span>
+                    </td>
+                    <td class="p-4 border-b border-gray-100 bg-green-50/30 border-l border-green-100">
+                        ${floorControls}
+                    </td>
+                    <td class="p-4 border-b border-gray-100 bg-blue-50/30 border-l border-blue-100 border-r">
+                        ${storageControls}
+                    </td>
+                    <td class="p-4 border-b border-gray-100 text-right">
+                        ${actionButtons}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- POS LOGIC ---
+
+        window.addToCart = (product) => {
+            const existing = cart.find(item => item.id === product.id);
+            const currentQty = existing ? existing.qty : 0;
+            
+            if (currentQty + 1 > (product.stockFloor || 0)) {
+                showToast(`Solo quedan ${product.stockFloor} en piso. ¡Surte la nevera!`, 'warning');
+                return;
+            }
+
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: parseFloat(product.price),
+                    emoji: product.emoji,
+                    qty: 1
+                });
+            }
+            saveCart();
+            renderCart();
+            renderProducts();
+        }
+
+        window.removeFromCart = (id) => {
+            cart = cart.filter(item => item.id !== id);
+            saveCart();
+            renderCart();
+            renderProducts();
+        }
+
+        window.changeQty = (id, delta) => {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            const product = products.find(p => p.id === id);
+
+            if (delta > 0 && product && item.qty >= (product.stockFloor || 0)) {
+                showToast('No hay más en mostrador', 'warning');
+                return;
+            }
+
+            item.qty += delta;
+            if (item.qty <= 0) {
+                removeFromCart(id);
+            } else {
+                saveCart();
+                renderCart();
+                renderProducts();
+            }
+        }
+
+        window.renderCart = () => {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            const subtotalEl = document.getElementById('cart-subtotal');
+            const checkoutBtn = document.getElementById('btn-checkout');
+            
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-60">
+                        <i class="ph ph-shopping-cart text-4xl"></i>
+                        <p class="text-sm">El carrito está vacío</p>
+                    </div>
+                `;
+                totalEl.innerText = '$0.00';
+                subtotalEl.innerText = '$0.00';
+                checkoutBtn.disabled = true;
+                checkoutBtn.classList.add('bg-gray-400');
+                checkoutBtn.classList.remove('bg-coffee-600');
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                total += itemTotal;
+
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-xl">${item.emoji || '☕'}</span>
+                        <div>
+                            <div class="font-medium text-sm text-coffee-900 line-clamp-1 w-24">${item.name}</div>
+                            <div class="text-xs text-gray-500">$${item.price.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center border border-gray-200 rounded-lg bg-gray-50">
+                            <button onclick="changeQty('${item.id}', -1)" class="px-2 py-1 text-gray-600 hover:bg-gray-200 rounded-l-lg">-</button>
+                            <span class="px-2 text-xs font-mono font-bold">${item.qty}</span>
+                            <button onclick="changeQty('${item.id}', 1)" class="px-2 py-1 text-gray-600 hover:bg-gray-200 rounded-r-lg">+</button>
+                        </div>
+                        <div class="font-bold text-sm w-12 text-right">$${itemTotal.toFixed(2)}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            subtotalEl.innerText = `$${total.toFixed(2)}`;
+            totalEl.innerText = `$${total.toFixed(2)}`;
+            checkoutBtn.disabled = false;
+            checkoutBtn.classList.remove('bg-gray-400');
+            checkoutBtn.classList.add('bg-coffee-600');
+        }
+
+        window.processCheckout = async () => {
+            if (cart.length === 0) return;
+
+            const btn = document.getElementById('btn-checkout');
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Procesando...';
+            btn.disabled = true;
+
+            try {
+                let total = 0;
+                cart.forEach(i => total += (i.price * i.qty));
+
+                const saleData = {
+                    timestamp: serverTimestamp(),
+                    total: total,
+                    items: cart,
+                    userId: currentUser.uid,
+                    cashierRole: currentRole
+                };
+
+                await addDoc(collection(db, 'sales'), saleData);
+
+                const updates = cart.map(item => {
+                    const prodRef = doc(db, 'products', item.id);
+                    const currentProd = products.find(p => p.id === item.id);
+                    const currentFloor = currentProd?.stockFloor || 0;
+                    const newFloor = currentFloor - item.qty;
+                    return updateDoc(prodRef, { stockFloor: newFloor >= 0 ? newFloor : 0 });
+                });
+
+                await Promise.all(updates);
+                
+                const msg = navigator.onLine ? `Venta completada: $${total.toFixed(2)}` : `Venta guardada LOCALMENTE (Offline)`;
+                showToast(msg, 'success');
+                
+                window.clearCart();
+
+            } catch (error) {
+                console.error("Checkout error:", error);
+                showToast("Error crítico en venta", "error");
+            } finally {
+                btn.innerHTML = '<i class="ph ph-check-circle text-lg"></i> Cobrar';
+                btn.disabled = false;
+            }
+        }
+
+        window.clearCart = () => {
+            cart = [];
+            saveCart();
+            renderCart();
+            renderProducts();
+        }
+
+        function saveCart() {
+            localStorage.setItem('pos_cart', JSON.stringify(cart));
+        }
+
+        // --- INVENTORY MANAGEMENT LOGIC ---
+
+        window.handleProductSubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.querySelector('#product-form button[type="submit"]');
+            const loader = document.getElementById('btn-save-loader');
+            const text = document.getElementById('btn-save-text');
+            
+            loader.classList.remove('hidden');
+            text.classList.add('hidden');
+
+            const id = document.getElementById('prod-id').value;
+            const data = {
+                emoji: document.getElementById('prod-emoji').value || '☕',
+                name: document.getElementById('prod-name').value,
+                price: parseFloat(document.getElementById('prod-price').value),
+                category: document.getElementById('prod-category').value,
+                stockFloor: parseInt(document.getElementById('prod-stock-floor').value) || 0,
+                stockStorage: parseInt(document.getElementById('prod-stock-storage').value) || 0
+            };
+            data.stock = data.stockFloor + data.stockStorage;
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'products', id), data);
+                    showToast(navigator.onLine ? 'Producto actualizado' : 'Actualizado LOCALMENTE', 'success');
+                } else {
+                    await addDoc(collection(db, 'products'), data);
+                    showToast(navigator.onLine ? 'Producto creado' : 'Creado LOCALMENTE', 'success');
+                }
+                closeProductModal();
+            } catch (error) {
+                console.error("Error saving product:", error);
+                showToast('Error al guardar', 'error');
+            } finally {
+                loader.classList.add('hidden');
+                text.classList.remove('hidden');
+            }
+        }
+
+        window.deleteProduct = async (id) => {
+            if(confirm('¿Seguro que quieres eliminar este producto?')) {
+                try {
+                    await deleteDoc(doc(db, 'products', id));
+                    showToast('Producto eliminado', 'success');
+                } catch (e) {
+                    showToast('Error al eliminar', 'error');
+                }
+            }
+        }
+
+        window.editProduct = (id) => {
+            const p = products.find(p => p.id === id);
+            if (!p) return;
+
+            document.getElementById('prod-id').value = p.id;
+            document.getElementById('prod-emoji').value = p.emoji;
+            document.getElementById('prod-name').value = p.name;
+            document.getElementById('prod-price').value = p.price;
+            document.getElementById('prod-category').value = p.category;
+            document.getElementById('prod-stock-floor').value = p.stockFloor || 0;
+            document.getElementById('prod-stock-storage').value = p.stockStorage || 0;
+            
+            document.getElementById('modal-title').innerText = "Editar Producto";
+            openProductModal();
+        }
+
+        window.quickAdjustStock = async (id, type, delta) => {
+            if(currentRole !== 'admin') return; // Double check security
+            
+            const p = products.find(p => p.id === id);
+            if (!p) return;
+            
+            const field = type === 'floor' ? 'stockFloor' : 'stockStorage';
+            const currentVal = p[field] || 0;
+            const newVal = currentVal + delta;
+            
+            if (newVal < 0) return;
+
+            try {
+                await updateDoc(doc(db, 'products', id), { 
+                    [field]: newVal,
+                    stock: (p.stockFloor || 0) + (p.stockStorage || 0) + delta 
+                });
+            } catch (e) {
+                showToast('Error conexión', 'error');
+            }
+        }
+
+        // --- RESTOCK LOGIC ---
+        
+        window.openRestockModal = (id, name, maxStorage) => {
+            if(maxStorage <= 0) {
+                showToast('Nada en depósito para mover', 'warning');
+                return;
+            }
+            document.getElementById('restock-id').value = id;
+            document.getElementById('restock-message').innerText = `Mover ${name} de Depósito a Piso (Máx: ${maxStorage})`;
+            document.getElementById('restock-qty').max = maxStorage;
+            document.getElementById('restock-qty').value = 1;
+            document.getElementById('restock-modal').classList.remove('hidden');
+            document.getElementById('restock-modal').classList.add('flex');
+        }
+
+        window.confirmRestock = async () => {
+            const id = document.getElementById('restock-id').value;
+            const qty = parseInt(document.getElementById('restock-qty').value);
+            const p = products.find(p => p.id === id);
+
+            if(!p || qty <= 0) return;
+            if(qty > (p.stockStorage || 0)) {
+                showToast('No hay tanto en depósito', 'error');
+                return;
+            }
+
+            try {
+                const newStorage = (p.stockStorage || 0) - qty;
+                const newFloor = (p.stockFloor || 0) + qty;
+
+                await updateDoc(doc(db, 'products', id), {
+                    stockStorage: newStorage,
+                    stockFloor: newFloor
+                });
+                
+                showToast(navigator.onLine ? `Movidos ${qty} a Piso` : `Movido LOCALMENTE (Sincronizará al conectar)`, 'success');
+                document.getElementById('restock-modal').classList.add('hidden');
+                document.getElementById('restock-modal').classList.remove('flex');
+            } catch(e) {
+                showToast('Error al mover inventario', 'error');
+            }
+        }
+
+        // --- UTILS & NAVIGATION ---
+
+        window.switchView = (viewName) => {
+            if(viewName === 'sales' && currentRole !== 'admin') {
+                showToast('Acceso restringido', 'error');
+                return;
+            }
+
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            document.getElementById(`view-${viewName}`).classList.add('flex');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-coffee-500');
+                btn.classList.add('text-gray-400');
+            });
+            
+            let activeBtnId = '';
+            if(viewName === 'pos') activeBtnId = 'nav-pos';
+            if(viewName === 'inventory') activeBtnId = 'nav-inv';
+            if(viewName === 'sales') activeBtnId = 'nav-sales';
+            
+            const btn = document.getElementById(activeBtnId);
+            if(btn) {
+                btn.classList.remove('text-gray-400');
+                btn.classList.add('text-coffee-500');
+            }
+        }
+
+        window.filterByCategory = (cat) => {
+            activeCategory = cat;
+            const buttons = document.querySelectorAll('.cat-filter');
+            buttons.forEach(b => {
+                if(b.textContent.includes(cat) || (cat === 'all' && b.textContent === 'Todos')) {
+                    b.classList.remove('bg-white', 'text-gray-600');
+                    b.classList.add('bg-coffee-600', 'text-white', 'ring-2', 'ring-offset-1', 'ring-coffee-600');
+                } else {
+                    b.classList.add('bg-white', 'text-gray-600');
+                    b.classList.remove('bg-coffee-600', 'text-white', 'ring-2', 'ring-offset-1', 'ring-coffee-600');
+                }
+            });
+            renderProducts();
+        }
+
+        window.filterProducts = () => {
+            renderProducts();
+        }
+
+        window.openProductModal = () => {
+            const modal = document.getElementById('product-modal');
+            const content = document.getElementById('product-modal-content');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if(!document.getElementById('prod-id').value) {
+                document.getElementById('product-form').reset();
+                document.getElementById('modal-title').innerText = "Nuevo Producto";
+            }
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        window.closeProductModal = () => {
+            const modal = document.getElementById('product-modal');
+            const content = document.getElementById('product-modal-content');
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.getElementById('prod-id').value = '';
+            }, 200);
+        }
+
+        window.showToast = (msg, type = 'success') => {
+            const div = document.createElement('div');
+            div.className = `fixed top-4 right-4 z-[150] px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-[-20px] opacity-0 ${type === 'success' ? 'bg-coffee-600 text-white' : 'bg-red-500 text-white'}`;
+            div.innerHTML = `<div class="flex items-center gap-2"><i class="ph ${type === 'success' ? 'ph-check-circle' : 'ph-warning-circle'}"></i> ${msg}</div>`;
+            document.body.appendChild(div);
+
+            requestAnimationFrame(() => {
+                div.classList.remove('translate-y-[-20px]', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                div.classList.add('opacity-0', 'translate-y-[-20px]');
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            const el = document.getElementById('current-date');
+            if(el) el.innerText = now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }, 1000);
+
+    </script>
+</body>
+</html>
